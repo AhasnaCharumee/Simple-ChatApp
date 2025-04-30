@@ -1,0 +1,110 @@
+package lk.ijse.chatapplication.controller;
+
+import javafx.event.ActionEvent;
+import javafx.fxml.FXML;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.stage.FileChooser;
+
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.*;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+public class SeverFormController {
+
+    @FXML
+    private TextArea txtArea;
+
+    @FXML
+    private TextField txtFeild;
+
+    @FXML
+    private ImageView imageView;
+
+    private ServerSocket serverSocket;
+    private Socket socket;
+    private DataInputStream dataInputStream;
+    private DataOutputStream dataOutputStream;
+
+    public void initialize() {
+        new Thread(() -> {
+            try {
+                serverSocket = new ServerSocket(5000);
+                txtArea.appendText("Server started.\n");
+
+                socket = serverSocket.accept();
+                txtArea.appendText("Client connected.\n");
+
+                dataInputStream = new DataInputStream(socket.getInputStream());
+                dataOutputStream = new DataOutputStream(socket.getOutputStream());
+
+                while (true) {
+                    String messageType = dataInputStream.readUTF();
+                    if (messageType.equals("text")) {
+                        String message = dataInputStream.readUTF();
+                        txtArea.appendText("\nClient: " + message);
+                    } else if (messageType.equals("image")) {
+                        int imageSize = dataInputStream.readInt();
+                        byte[] imageBytes = new byte[imageSize];
+                        dataInputStream.readFully(imageBytes);
+                        Image image = new Image(new ByteArrayInputStream(imageBytes));
+                        imageView.setImage(image);
+                        txtArea.appendText("\nClient: Sent an image.");
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    @FXML
+    void btnSendOnAction(ActionEvent event) {
+        try {
+            String msg = txtFeild.getText();
+            dataOutputStream.writeUTF("text");
+            dataOutputStream.writeUTF(msg);
+            dataOutputStream.flush();
+            txtArea.appendText("\nServer: " + msg);
+            txtFeild.clear();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @FXML
+    void btnSendImageOnAction(ActionEvent event) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Select Image");
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.jpeg", "*.gif")
+        );
+        File selectedFile = fileChooser.showOpenDialog(null);
+        if (selectedFile != null) {
+            try {
+                BufferedImage bufferedImage = ImageIO.read(selectedFile);
+                ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                ImageIO.write(bufferedImage, "png", byteArrayOutputStream);
+                byte[] imageBytes = byteArrayOutputStream.toByteArray();
+
+                dataOutputStream.writeUTF("image");
+                dataOutputStream.writeInt(imageBytes.length);
+                dataOutputStream.write(imageBytes);
+                dataOutputStream.flush();
+
+                Image image = new Image(new ByteArrayInputStream(imageBytes));
+                imageView.setImage(image);
+                txtArea.appendText("\nServer: Sent an image.");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void btnSendFileOnAction(ActionEvent actionEvent) {
+    }
+}

@@ -98,7 +98,7 @@ ChatApp/
 
 ## 🖼️ Screenshots
 
-![Chat Screenshot](src/main/resources/images/Screenshot%202025-04-30%20055944.png)
+![Chat Screenshot](src/main/resources/images/chat_ui.png)
 
 ---
 
